@@ -37,8 +37,14 @@ class BoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    _drawBackground(canvas, size);
-    _drawGrid(canvas);
+    // Смещаем всё содержимое на 2px внутрь, чтобы блоки не касались краёв
+    canvas.save();
+    canvas.translate(2, 2);
+    final innerSize = Size(size.width - 4, size.height - 4);
+    canvas.clipRect(Offset.zero & innerSize);
+
+    _drawBackground(canvas, innerSize);
+    _drawGrid(canvas, innerSize);
     _drawLockedBlocks(canvas);
 
     if (hardDropData != null) {
@@ -53,6 +59,18 @@ class BoardPainter extends CustomPainter {
     if (hardDropData != null) {
       _drawHardDropFlash(canvas, hardDropData!);
     }
+
+    canvas.restore();
+
+    // Красная рамка по самому краю Canvas
+    final borderPaint = Paint()
+      ..color = const Color(0xFF8B0000)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      borderPaint,
+    );
   }
 
   @override
@@ -67,23 +85,23 @@ class BoardPainter extends CustomPainter {
 
   void _drawBackground(Canvas canvas, Size size) {
     final bgPaint = Paint()..color = USSRColors.backgroundBeige;
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width + 4, size.height + 4), bgPaint);
   }
 
   // ========== СЕТКА ==========
 
-  void _drawGrid(Canvas canvas) {
+  void _drawGrid(Canvas canvas, Size size) {
     final gridPaint = Paint()
       ..color = USSRColors.darkGray.withValues(alpha: 0.3)
       ..strokeWidth = 0.5;
 
     for (int col = 0; col <= GameBoard.width; col++) {
       final x = col * cellSize;
-      canvas.drawLine(Offset(x, 0), Offset(x, GameBoard.height * cellSize), gridPaint);
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
     }
     for (int row = 0; row <= GameBoard.height; row++) {
       final y = row * cellSize;
-      canvas.drawLine(Offset(0, y), Offset(GameBoard.width * cellSize, y), gridPaint);
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
   }
 
@@ -118,12 +136,13 @@ class BoardPainter extends CustomPainter {
     }
   }
 
-  // ========== GHOST PIECE (пунктирная рамка) ==========
+  // ========== GHOST PIECE (полупрозрачный контур с заливкой) ==========
 
   void _drawGhostPiece(Canvas canvas, Tetromino piece) {
     final ghostY = gameBoard.getGhostY(piece);
     final shape = piece.shape;
-    final color = getUssrColor(piece.type).withValues(alpha: 0.3);
+    final fillColor = getUssrColor(piece.type).withValues(alpha: 0.25);
+    final strokeColor = getUssrColor(piece.type).withValues(alpha: 0.6);
 
     for (int row = 0; row < shape.length; row++) {
       for (int col = 0; col < shape[row].length; col++) {
@@ -139,28 +158,20 @@ class BoardPainter extends CustomPainter {
         );
         final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(3));
 
-        // Пунктирная рамка
-        final paint = Paint()
-          ..color = color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5;
-        final path = Path()..addRRect(rrect);
-        canvas.drawPath(_dashPath(path, 3, 3), paint);
-      }
-    }
-  }
+        // Заливка полупрозрачным цветом фигуры
+        final fillPaint = Paint()
+          ..color = fillColor
+          ..style = PaintingStyle.fill;
+        canvas.drawRRect(rrect, fillPaint);
 
-  Path _dashPath(Path source, double dashLength, double gapLength) {
-    final dest = Path();
-    for (final metric in source.computeMetrics()) {
-      double distance = 0;
-      while (distance < metric.length) {
-        final next = distance + dashLength;
-        dest.addPath(metric.extractPath(distance, next.clamp(0, metric.length)), Offset.zero);
-        distance = next + gapLength;
+        // Сплошной контур потолще
+        final strokePaint = Paint()
+          ..color = strokeColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5;
+        canvas.drawRRect(rrect, strokePaint);
       }
     }
-    return dest;
   }
 
   // ========== HARD DROP ТРЕЙЛ ==========

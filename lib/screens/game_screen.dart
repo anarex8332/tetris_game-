@@ -25,14 +25,6 @@ class _GameScreenState extends State<GameScreen>
     with TickerProviderStateMixin {
   late Ticker _ticker;
 
-  // ---- DAS / ARR для кнопок Left/Right ----
-  Timer? _dasTimer;
-  Timer? _arrTimer;
-  bool _leftHeld = false;
-  bool _rightHeld = false;
-  static const int dasDelay = 150;
-  static const int arrInterval = 30;
-
   // ---- Жесты ----
   double _horizontalDragAccum = 0;
   double _verticalDragStartY = 0;
@@ -153,17 +145,7 @@ class _GameScreenState extends State<GameScreen>
     _tetrisShakeController.dispose();
     _tetrisBonusController.dispose();
     _clearFlashController.dispose();
-    _cancelButtonTimers();
     super.dispose();
-  }
-
-  void _cancelButtonTimers() {
-    _dasTimer?.cancel();
-    _arrTimer?.cancel();
-    _dasTimer = null;
-    _arrTimer = null;
-    _leftHeld = false;
-    _rightHeld = false;
   }
 
   void _onTick(Duration elapsed) => widget.controller.tick();
@@ -216,34 +198,6 @@ class _GameScreenState extends State<GameScreen>
         ),
       );
     }
-  }
-
-  // ========== УПРАВЛЕНИЕ: КНОПКИ ==========
-
-  void _onLeftDown() {
-    if (_leftHeld || _rightHeld) return;
-    _leftHeld = true;
-    widget.controller.moveLeft();
-    _dasTimer = Timer(const Duration(milliseconds: dasDelay), () {
-      _arrTimer = Timer.periodic(const Duration(milliseconds: arrInterval), (_) {
-        widget.controller.moveLeft();
-      });
-    });
-  }
-
-  void _onRightDown() {
-    if (_leftHeld || _rightHeld) return;
-    _rightHeld = true;
-    widget.controller.moveRight();
-    _dasTimer = Timer(const Duration(milliseconds: dasDelay), () {
-      _arrTimer = Timer.periodic(const Duration(milliseconds: arrInterval), (_) {
-        widget.controller.moveRight();
-      });
-    });
-  }
-
-  void _onButtonUp() {
-    _cancelButtonTimers();
   }
 
   // ========== УПРАВЛЕНИЕ: ЖЕСТЫ ==========
@@ -315,10 +269,12 @@ class _GameScreenState extends State<GameScreen>
                 onHorizontalDragUpdate: _onHorizontalDragUpdate,
                 onVerticalDragStart: _onVerticalDragStart,
                 onVerticalDragUpdate: _onVerticalDragUpdate,
-                child: _buildGameBoardWithEffects(ctrl, cellSize),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: _buildGameBoardWithEffects(ctrl, cellSize),
+                ),
               ),
             ),
-            _buildControls(),
           ],
         ),
       ),
@@ -329,38 +285,26 @@ class _GameScreenState extends State<GameScreen>
     final boardWidth = GameBoard.width * cellSize;
     final boardHeight = GameBoard.height * cellSize;
 
-    Widget board = Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: USSRColors.darkRed, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: USSRColors.black.withValues(alpha: 0.3),
-            blurRadius: 8,
-            offset: const Offset(2, 2),
+    Widget board = Stack(
+      children: [
+        CustomPaint(
+          size: Size(boardWidth, boardHeight),
+          painter: BoardPainter(
+            gameBoard: ctrl.board,
+            activePiece: ctrl.currentPiece,
+            showGhost: ctrl.state == GameState.playing,
+            cellSize: cellSize,
+            hardDropData: _hardDropData,
           ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          CustomPaint(
-            size: Size(boardWidth, boardHeight),
-            painter: BoardPainter(
-              gameBoard: ctrl.board,
-              activePiece: ctrl.currentPiece,
-              showGhost: ctrl.state == GameState.playing,
-              cellSize: cellSize,
-              hardDropData: _hardDropData,
+        ),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(
+              painter: _ScanlinePainter(),
             ),
           ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: CustomPaint(
-                painter: _ScanlinePainter(),
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
 
     // Screen Shake
@@ -380,12 +324,22 @@ class _GameScreenState extends State<GameScreen>
       );
     }
 
-    return SizedBox(
-      width: boardWidth,
-      height: boardHeight,
-      child: Stack(
-        children: [
-          board,
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: USSRColors.black.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(2, 2),
+          ),
+        ],
+      ),
+      child: SizedBox(
+        width: boardWidth,
+        height: boardHeight,
+        child: Stack(
+          children: [
+            board,
 
           // Flash overlay
           if (_tetrisActive)
@@ -554,7 +508,8 @@ class _GameScreenState extends State<GameScreen>
                 },
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -698,102 +653,15 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  // ========== КНОПКИ УПРАВЛЕНИЯ ==========
-
-  Widget _buildControls() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [USSRColors.darkRed, Color(0xFF4A0000)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        border: Border(
-          top: BorderSide(color: USSRColors.red, width: 2),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildButton(
-              label: '◄',
-              onDown: _onLeftDown,
-              onUp: _onButtonUp,
-            ),
-            _buildButton(
-              label: '►',
-              onDown: _onRightDown,
-              onUp: _onButtonUp,
-            ),
-            _buildButton(
-              label: '↻',
-              onTap: () => widget.controller.rotate(),
-            ),
-            _buildButton(
-              label: '⬇',
-              onTap: () => _triggerHardDrop(widget.controller),
-            ),
-            _buildButton(
-              label: 'ЗАПАС',
-              onTap: () => widget.controller.hold(),
-              isText: true,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildButton({
-    required String label,
-    VoidCallback? onTap,
-    VoidCallback? onDown,
-    VoidCallback? onUp,
-    bool isText = false,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      onTapDown: onDown != null ? (_) => onDown() : null,
-      onTapUp: onUp != null ? (_) => onUp() : null,
-      onTapCancel: onUp,
-      child: Container(
-        width: isText ? 72 : 56,
-        height: 52,
-        decoration: BoxDecoration(
-          color: USSRColors.black.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: USSRColors.gold.withValues(alpha: 0.5),
-            width: 1.5,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: isText ? 12 : 22,
-              fontWeight: FontWeight.bold,
-              color: USSRColors.cream,
-              letterSpacing: isText ? 1 : 0,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   double _calculateCellSize(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final padding = MediaQuery.of(context).padding;
-    final availableHeight = screenHeight - 96 - padding.top - padding.bottom - 80;
-    final availableWidth = screenWidth - 8;
+    final availableHeight = screenHeight - 32 - padding.top - padding.bottom;
+    final availableWidth = screenWidth - 16;
     final heightBased = availableHeight / GameBoard.height;
     final widthBased = availableWidth / GameBoard.width;
-    return (heightBased < widthBased ? heightBased : widthBased).floorToDouble().clamp(16.0, 50.0);
+    return (heightBased < widthBased ? heightBased : widthBased).floorToDouble().clamp(20.0, 70.0);
   }
 }
 

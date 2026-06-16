@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/game_controller.dart';
+import '../models/score_storage.dart';
 import 'game_screen.dart';
 
 /// Главный экран меню в советской эстетике.
@@ -21,15 +21,11 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   }
 
   Future<void> _loadHighScore() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (mounted) {
-        setState(() {
-          _highScore = prefs.getInt('tetris_high_score') ?? 0;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading high score: $e');
+    final score = await ScoreStorage.loadHighScore();
+    if (mounted) {
+      setState(() {
+        _highScore = score;
+      });
     }
   }
 
