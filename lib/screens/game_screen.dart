@@ -255,7 +255,6 @@ class _GameScreenState extends State<GameScreen>
   @override
   Widget build(BuildContext context) {
     final ctrl = widget.controller;
-    final cellSize = _calculateCellSize(context);
 
     return Scaffold(
       backgroundColor: USSRColors.backgroundDark,
@@ -264,15 +263,19 @@ class _GameScreenState extends State<GameScreen>
           children: [
             _buildTopBar(ctrl),
             Expanded(
-              child: GestureDetector(
-                onTap: () => ctrl.rotate(),
-                onHorizontalDragUpdate: _onHorizontalDragUpdate,
-                onVerticalDragStart: _onVerticalDragStart,
-                onVerticalDragUpdate: _onVerticalDragUpdate,
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: _buildGameBoardWithEffects(ctrl, cellSize),
-                ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final cellSize = _calcCellSizeFromConstraints(constraints);
+                  return GestureDetector(
+                    onTap: () => ctrl.rotate(),
+                    onHorizontalDragUpdate: _onHorizontalDragUpdate,
+                    onVerticalDragStart: _onVerticalDragStart,
+                    onVerticalDragUpdate: _onVerticalDragUpdate,
+                    child: Center(
+                      child: _buildGameBoardWithEffects(ctrl, cellSize),
+                    ),
+                  );
+                },
               ),
             ),
             _buildBannerPlaceholder(),
@@ -680,16 +683,9 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
-  double _calculateCellSize(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    final padding = MediaQuery.of(context).padding;
-    // Верхняя панель: 6+6 padding + ~36px содержимого = 48px
-    // Баннер: 50px height + 4+4 margin = 58px
-    const topBarHeight = 48.0;
-    const bannerHeight = 58.0;
-    final availableHeight = screenHeight - topBarHeight - bannerHeight - padding.top - padding.bottom;
-    final availableWidth = screenWidth - 16;
+  double _calcCellSizeFromConstraints(BoxConstraints constraints) {
+    final availableHeight = constraints.maxHeight;
+    final availableWidth = constraints.maxWidth;
     final heightBased = availableHeight / GameBoard.height;
     final widthBased = availableWidth / GameBoard.width;
     return (heightBased < widthBased ? heightBased : widthBased).floorToDouble().clamp(20.0, 70.0);
