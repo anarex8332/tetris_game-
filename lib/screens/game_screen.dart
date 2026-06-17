@@ -11,7 +11,7 @@ import '../theme/ussr_colors.dart';
 import 'game_over_screen.dart';
 
 /// Главный экран игры (советский стиль).
-/// Управление: экранные кнопки + жесты, как в официальном мобильном Tetris.
+/// Управление: только жесты.
 class GameScreen extends StatefulWidget {
   final GameController controller;
 
@@ -275,7 +275,34 @@ class _GameScreenState extends State<GameScreen>
                 ),
               ),
             ),
+            _buildBannerPlaceholder(),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBannerPlaceholder() {
+    return Container(
+      height: 50,
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: USSRColors.black.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: USSRColors.gold.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: const Center(
+        child: Text(
+          'РЕКЛАМА',
+          style: TextStyle(
+            color: Color(0xFFFFF8E1),
+            fontSize: 12,
+            letterSpacing: 4,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
@@ -341,161 +368,117 @@ class _GameScreenState extends State<GameScreen>
           children: [
             board,
 
-          // Flash overlay
-          if (_tetrisActive)
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: _tetrisFlashController,
-                builder: (context, child) {
-                  final progress = _tetrisFlashController.value;
-                  double opacity = 0.0;
-                  if (progress < 0.25) {
-                    opacity = (progress / 0.25) * 0.8;
-                  } else if (progress < 0.40) {
-                    opacity = 0.8 * (1.0 - (progress - 0.25) / 0.15);
-                  } else if (progress < 0.60) {
-                    opacity = ((progress - 0.40) / 0.20) * 0.6;
-                  } else if (progress < 0.75) {
-                    opacity = 0.6 * (1.0 - (progress - 0.60) / 0.15);
-                  } else if (progress < 0.90) {
-                    opacity = ((progress - 0.75) / 0.15) * 0.4;
-                  } else {
-                    opacity = 0.4 * (1.0 - (progress - 0.90) / 0.10);
-                  }
-                  return Container(
-                    color: const Color(0xFFFFD700).withValues(alpha: opacity),
-                  );
-                },
-              ),
-            ),
-
-          // Line clear flash (1-3 lines)
-          if (_clearFlashActive)
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: _clearFlashController,
-                builder: (context, child) {
-                  final progress = _clearFlashController.value;
-                  final opacity = (1.0 - progress).clamp(0.0, 0.6);
-                  return Container(
-                    color: Colors.white.withValues(alpha: opacity),
-                  );
-                },
-              ),
-            ),
-
-          // Particles overlay
-          if (_tetrisActive)
-            Positioned.fill(
-              child: IgnorePointer(
+            // Flash overlay
+            if (_tetrisActive)
+              Positioned.fill(
                 child: AnimatedBuilder(
-                  animation: _tetrisParticlesController,
+                  animation: _tetrisFlashController,
                   builder: (context, child) {
-                    return CustomPaint(
-                      painter: _TetrisParticlesPainter(
-                        progress: _tetrisParticlesController.value,
-                        boardWidth: boardWidth,
-                        boardHeight: boardHeight,
-                      ),
+                    final progress = _tetrisFlashController.value;
+                    double opacity = 0.0;
+                    if (progress < 0.25) {
+                      opacity = (progress / 0.25) * 0.8;
+                    } else if (progress < 0.40) {
+                      opacity = 0.8 * (1.0 - (progress - 0.25) / 0.15);
+                    } else if (progress < 0.60) {
+                      opacity = ((progress - 0.40) / 0.20) * 0.6;
+                    } else if (progress < 0.75) {
+                      opacity = 0.6 * (1.0 - (progress - 0.60) / 0.15);
+                    } else if (progress < 0.90) {
+                      opacity = ((progress - 0.75) / 0.15) * 0.4;
+                    } else {
+                      opacity = 0.4 * (1.0 - (progress - 0.90) / 0.10);
+                    }
+                    return Container(
+                      color: const Color(0xFFFFD700).withValues(alpha: opacity),
                     );
                   },
                 ),
               ),
-            ),
 
-          // TETRIS! text
-          if (_tetrisActive)
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: _tetrisTextController,
-                builder: (context, child) {
-                  final progress = _tetrisTextController.value;
-                  double scale;
-                  if (progress < 0.4) {
-                    scale = progress / 0.4 * 1.5;
-                  } else {
-                    scale = 1.5 - (progress - 0.4) / 0.6 * 0.5;
-                  }
-                  double rotation;
-                  if (progress < 0.3) {
-                    rotation = -10.0 * (1.0 - progress / 0.3);
-                  } else if (progress < 0.7) {
-                    rotation = 0.0 + 5.0 * ((progress - 0.3) / 0.4);
-                  } else {
-                    rotation = 5.0 * (1.0 - (progress - 0.7) / 0.3);
-                  }
-
-                  return Center(
-                    child: Transform.scale(
-                      scale: scale,
-                      child: Transform.rotate(
-                        angle: rotation * (pi / 180.0),
-                        child: ShaderMask(
-                          shaderCallback: (bounds) => const LinearGradient(
-                            colors: [Color(0xFFFFD700), Color(0xFFFF4500)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ).createShader(bounds),
-                          child: Text(
-                            'ТЕТРИС!',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: boardWidth / 8,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 6,
-                              color: Colors.white,
-                              shadows: [
-                                Shadow(
-                                  color: const Color(0xFFFFD700).withValues(alpha: 0.8),
-                                  blurRadius: 20,
-                                ),
-                                Shadow(
-                                  color: const Color(0xFFFF4500).withValues(alpha: 0.5),
-                                  blurRadius: 40,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
+            // Line clear flash (1-3 lines)
+            if (_clearFlashActive)
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _clearFlashController,
+                  builder: (context, child) {
+                    final progress = _clearFlashController.value;
+                    final opacity = (1.0 - progress).clamp(0.0, 0.6);
+                    return Container(
+                      color: Colors.white.withValues(alpha: opacity),
+                    );
+                  },
+                ),
               ),
-            ),
 
-          // Bonus score text
-          if (_tetrisActive)
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: _tetrisBonusController,
-                builder: (context, child) {
-                  final progress = _tetrisBonusController.value;
-                  final bonus = 1200 * widget.controller.level;
-                  final offset = -progress * 40.0;
-                  final opacity = 1.0 - progress;
-                  final scale = progress < 0.2 ? progress / 0.2 : 1.2 - (progress - 0.2) / 0.8 * 0.2;
+            // Particles overlay
+            if (_tetrisActive)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: _tetrisParticlesController,
+                    builder: (context, child) {
+                      return CustomPaint(
+                        painter: _TetrisParticlesPainter(
+                          progress: _tetrisParticlesController.value,
+                          boardWidth: boardWidth,
+                          boardHeight: boardHeight,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
 
-                  return Transform.translate(
-                    offset: Offset(0, offset),
-                    child: Opacity(
-                      opacity: opacity.clamp(0.0, 1.0),
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: Transform.translate(
-                          offset: const Offset(0, -30),
-                          child: Transform.scale(
-                            scale: scale,
+            // TETRIS! text
+            if (_tetrisActive)
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _tetrisTextController,
+                  builder: (context, child) {
+                    final progress = _tetrisTextController.value;
+                    double scale;
+                    if (progress < 0.4) {
+                      scale = progress / 0.4 * 1.5;
+                    } else {
+                      scale = 1.5 - (progress - 0.4) / 0.6 * 0.5;
+                    }
+                    double rotation;
+                    if (progress < 0.3) {
+                      rotation = -10.0 * (1.0 - progress / 0.3);
+                    } else if (progress < 0.7) {
+                      rotation = 0.0 + 5.0 * ((progress - 0.3) / 0.4);
+                    } else {
+                      rotation = 5.0 * (1.0 - (progress - 0.7) / 0.3);
+                    }
+
+                    return Center(
+                      child: Transform.scale(
+                        scale: scale,
+                        child: Transform.rotate(
+                          angle: rotation * (pi / 180.0),
+                          child: ShaderMask(
+                            shaderCallback: (bounds) => const LinearGradient(
+                              colors: [Color(0xFFFFD700), Color(0xFFFF4500)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ).createShader(bounds),
                             child: Text(
-                              '+$bonus',
+                              'ТЕТРИС!',
+                              textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: boardWidth / 10,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFFFFD700),
+                                fontSize: boardWidth / 8,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 6,
+                                color: Colors.white,
                                 shadows: [
                                   Shadow(
-                                    color: Colors.black.withValues(alpha: 0.5),
-                                    blurRadius: 8,
+                                    color: const Color(0xFFFFD700).withValues(alpha: 0.8),
+                                    blurRadius: 20,
+                                  ),
+                                  Shadow(
+                                    color: const Color(0xFFFF4500).withValues(alpha: 0.5),
+                                    blurRadius: 40,
                                   ),
                                 ],
                               ),
@@ -503,11 +486,55 @@ class _GameScreenState extends State<GameScreen>
                           ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
+
+            // Bonus score text
+            if (_tetrisActive)
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _tetrisBonusController,
+                  builder: (context, child) {
+                    final progress = _tetrisBonusController.value;
+                    final bonus = 1200 * widget.controller.level;
+                    final offset = -progress * 40.0;
+                    final opacity = 1.0 - progress;
+                    final scale = progress < 0.2 ? progress / 0.2 : 1.2 - (progress - 0.2) / 0.8 * 0.2;
+
+                    return Transform.translate(
+                      offset: Offset(0, offset),
+                      child: Opacity(
+                        opacity: opacity.clamp(0.0, 1.0),
+                        child: Align(
+                          alignment: Alignment.center,
+                          child: Transform.translate(
+                            offset: const Offset(0, -30),
+                            child: Transform.scale(
+                              scale: scale,
+                              child: Text(
+                                '+$bonus',
+                                style: TextStyle(
+                                  fontSize: boardWidth / 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFFFFD700),
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black.withValues(alpha: 0.5),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
           ],
         ),
       ),
@@ -657,7 +684,11 @@ class _GameScreenState extends State<GameScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final padding = MediaQuery.of(context).padding;
-    final availableHeight = screenHeight - 32 - padding.top - padding.bottom;
+    // Верхняя панель: 6+6 padding + ~36px содержимого = 48px
+    // Баннер: 50px height + 4+4 margin = 58px
+    const topBarHeight = 48.0;
+    const bannerHeight = 58.0;
+    final availableHeight = screenHeight - topBarHeight - bannerHeight - padding.top - padding.bottom;
     final availableWidth = screenWidth - 16;
     final heightBased = availableHeight / GameBoard.height;
     final widthBased = availableWidth / GameBoard.width;

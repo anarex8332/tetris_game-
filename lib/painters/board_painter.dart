@@ -37,14 +37,8 @@ class BoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Смещаем всё содержимое на 2px внутрь, чтобы блоки не касались краёв
-    canvas.save();
-    canvas.translate(2, 2);
-    final innerSize = Size(size.width - 4, size.height - 4);
-    canvas.clipRect(Offset.zero & innerSize);
-
-    _drawBackground(canvas, innerSize);
-    _drawGrid(canvas, innerSize);
+    _drawBackground(canvas, size);
+    _drawGrid(canvas);
     _drawLockedBlocks(canvas);
 
     if (hardDropData != null) {
@@ -60,9 +54,7 @@ class BoardPainter extends CustomPainter {
       _drawHardDropFlash(canvas, hardDropData!);
     }
 
-    canvas.restore();
-
-    // Красная рамка по самому краю Canvas
+    // Красная рамка по краю Canvas
     final borderPaint = Paint()
       ..color = const Color(0xFF8B0000)
       ..style = PaintingStyle.stroke
@@ -85,23 +77,23 @@ class BoardPainter extends CustomPainter {
 
   void _drawBackground(Canvas canvas, Size size) {
     final bgPaint = Paint()..color = USSRColors.backgroundBeige;
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width + 4, size.height + 4), bgPaint);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
   }
 
   // ========== СЕТКА ==========
 
-  void _drawGrid(Canvas canvas, Size size) {
+  void _drawGrid(Canvas canvas) {
     final gridPaint = Paint()
       ..color = USSRColors.darkGray.withValues(alpha: 0.3)
       ..strokeWidth = 0.5;
 
     for (int col = 0; col <= GameBoard.width; col++) {
       final x = col * cellSize;
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+      canvas.drawLine(Offset(x, 0), Offset(x, GameBoard.height * cellSize), gridPaint);
     }
     for (int row = 0; row <= GameBoard.height; row++) {
       final y = row * cellSize;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+      canvas.drawLine(Offset(0, y), Offset(GameBoard.width * cellSize, y), gridPaint);
     }
   }
 
@@ -151,10 +143,10 @@ class BoardPainter extends CustomPainter {
         if (gy < 0) continue;
 
         final rect = Rect.fromLTWH(
-          (piece.x + col) * cellSize + 1,
-          gy * cellSize + 1,
-          cellSize - 2,
-          cellSize - 2,
+          (piece.x + col) * cellSize + 2,
+          gy * cellSize + 2,
+          cellSize - 4,
+          cellSize - 4,
         );
         final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(3));
 
@@ -220,7 +212,7 @@ class BoardPainter extends CustomPainter {
         final bx = (data.piece.x + col).toDouble();
         final by = (data.endY + row).toDouble();
         // Белая вспышка
-        final rect = Rect.fromLTWH(bx * cellSize + 1, by * cellSize + 1, cellSize - 2, cellSize - 2);
+        final rect = Rect.fromLTWH(bx * cellSize + 2, by * cellSize + 2, cellSize - 4, cellSize - 4);
         final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(3));
         final flashPaint = Paint()..color = Colors.white.withValues(alpha: flashAlpha);
         canvas.drawRRect(rrect, flashPaint);
@@ -231,7 +223,7 @@ class BoardPainter extends CustomPainter {
   // ========== БЛОК (с объёмом) ==========
 
   void _drawBlock(Canvas canvas, double x, double y, Color color, {bool bright = true}) {
-    final rect = Rect.fromLTWH(x * cellSize + 1, y * cellSize + 1, cellSize - 2, cellSize - 2);
+    final rect = Rect.fromLTWH(x * cellSize + 2, y * cellSize + 2, cellSize - 4, cellSize - 4);
     final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(3));
     final fillPaint = Paint()..color = color;
     canvas.drawRRect(rrect, fillPaint);
@@ -245,7 +237,7 @@ class BoardPainter extends CustomPainter {
       canvas.drawRRect(rrect, highlightPaint);
 
       final innerRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(x * cellSize + 3, y * cellSize + 3, cellSize - 6, (cellSize - 6) / 2),
+        Rect.fromLTWH(x * cellSize + 4, y * cellSize + 4, cellSize - 8, (cellSize - 8) / 2),
         const Radius.circular(2),
       );
       final shinePaint = Paint()..color = Colors.white.withValues(alpha: 0.15);
@@ -254,7 +246,7 @@ class BoardPainter extends CustomPainter {
 
     // Чёрная тень снизу-справа
     final shadowRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(x * cellSize + 1, y * cellSize + 1, cellSize - 2, cellSize - 2),
+      Rect.fromLTWH(x * cellSize + 2, y * cellSize + 2, cellSize - 4, cellSize - 4),
       const Radius.circular(3),
     );
     final shadowPaint = Paint()
