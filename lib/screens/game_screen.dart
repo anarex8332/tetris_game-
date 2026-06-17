@@ -25,6 +25,9 @@ class _GameScreenState extends State<GameScreen>
     with TickerProviderStateMixin {
   late Ticker _ticker;
 
+  // ---- Soft Drop Long Press ----
+  Timer? _softDropTimer;
+
   // ---- Жесты ----
   double _horizontalDragAccum = 0;
   double _verticalDragStartY = 0;
@@ -145,6 +148,7 @@ class _GameScreenState extends State<GameScreen>
     _tetrisShakeController.dispose();
     _tetrisBonusController.dispose();
     _clearFlashController.dispose();
+    _softDropTimer?.cancel();
     super.dispose();
   }
 
@@ -267,7 +271,21 @@ class _GameScreenState extends State<GameScreen>
                 builder: (context, constraints) {
                   final cellSize = _calcCellSizeFromConstraints(constraints);
                   return GestureDetector(
-                    onTap: () => ctrl.rotate(),
+                    onTapUp: (_) => ctrl.rotate(),
+                    onLongPressStart: (_) {
+                      _softDropTimer = Timer.periodic(
+                        const Duration(milliseconds: 30),
+                        (_) => ctrl.softDrop(),
+                      );
+                    },
+                    onLongPressEnd: (_) {
+                      _softDropTimer?.cancel();
+                      _softDropTimer = null;
+                    },
+                    onLongPressCancel: () {
+                      _softDropTimer?.cancel();
+                      _softDropTimer = null;
+                    },
                     onHorizontalDragUpdate: _onHorizontalDragUpdate,
                     onVerticalDragStart: _onVerticalDragStart,
                     onVerticalDragUpdate: _onVerticalDragUpdate,
